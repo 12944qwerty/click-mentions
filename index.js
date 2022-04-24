@@ -56,6 +56,8 @@ module.exports = class ClickableMentions extends Plugin {
                 
                     if (channelId) {
                         const channel = channelStore.getChannel(channelId);
+                        if (!channel) return;
+
                         guildId = channel.guild_id;
                         messageId = channel.lastMessageId;
                     }
@@ -64,6 +66,8 @@ module.exports = class ClickableMentions extends Plugin {
                 },
                 onContextMenu: (event) => {
                     const channel = channelStore.getChannel(channelId);
+                    if (!channel) return;
+                    
                     let ConnectedChannel;
                     
                     if (channel.isVocal()) {                    

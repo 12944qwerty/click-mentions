@@ -1,11 +1,13 @@
 const { Plugin } = require('powercord/entities');
-const { React, getModule } = require('powercord/webpack');
+const { React, getModule, constants: { Routes, ActionTypes }, FluxDispatcher, contextMenu } = require('powercord/webpack');
 const { inject, uninject } = require('powercord/injector');
-const { AsyncComponent } = require('powercord/components');
+const { AsyncComponent, ContextMenu } = require('powercord/components');
 
 const Popout = AsyncComponent.fromDisplayName('Popout');
 const UserPopoutContainer = AsyncComponent.from(getModule(m => m.type?.displayName === 'UserPopoutContainer'));
 
+const { transitionTo } = getModule([ 'transitionTo' ], false);
+const channelStore = getModule([ 'getDMFromUserId', 'getChannel' ], false);
 
 module.exports = class ClickableMentions extends Plugin {
     startPlugin () {
@@ -18,7 +20,7 @@ module.exports = class ClickableMentions extends Plugin {
 
     patchRichMentions () {
         const DiscordRichComponents = getModule([ 'RoleMention', 'UserMention' ], false);
-        console.log(DiscordRichComponents)
+        console.log(DiscordRichComponents) // Used to see what else we can patch :P
 
         inject('clickable-umentions-slate', DiscordRichComponents, 'UserMention', (args, res) => {
             const [ props ] = args;
@@ -36,6 +38,55 @@ module.exports = class ClickableMentions extends Plugin {
 
             return res;
         });
+
+        inject('clickable-cmentions-slate', DiscordRichComponents, 'ChannelMention', ([{ id: channelId }], res) => {
+            const { children } = res?.props || {};
+
+            if (!children) return res;
+
+            res = React.createElement("div", {
+                onClick: () => {
+                    let guildId, messageId;
+
+                    FluxDispatcher.dirtyDispatch({ type: ActionTypes.LAYER_POP });
+                
+                    if (channelId) {
+                    const channel = channelStore.getChannel(channelId);
+                    guildId = channel.guild_id;
+                    messageId = channel.lastMessageId;
+                    }
+                
+                    transitionTo(Routes.CHANNEL(guildId, channelId, messageId));
+                },
+                onContextMenu: (e) => {
+                    try {
+                        let menu = React.createElement(ContextMenu, {
+                            itemGroups: [
+                                [{
+                                    type: 'button',
+                                    name: 'Mark as Read',
+                                    onClick: () => {console.log("mark as read")}
+                                }],
+                                [{
+                                    type: 'submenu',
+                                    name: 'Mute Channel',
+                                    getItems: () => {return [
+                                        {
+                                            type: 'button',
+                                            name: 'For 15 Minutes',
+                                            onClick: () => {console.log("mute 15 minutes")}
+                                        }
+                                    ]}
+                                }]
+                            ]
+                        });
+                        contextMenu.openContextMenu(e, () => menu) // temporary context menu
+                    } catch (err) {console.log(err)}
+                },
+            }, res)
+
+            return res;
+        })
     }
 
     renderUserPopout (props, children) {

@@ -3,5 +3,6 @@
   "description": "A port of DevilBro's Clickable Mentions",
   "author": "12944qwerty",
   "license": "MIT",
-  "version": "1.0.0"
+  "version": "1.0.0",
+  "optionalDependencies": ["rolecolor-everywhere"]
 }
